@@ -1,0 +1,64 @@
+/*Center the divs vertically and horizontally*/
+.game {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  flex-direction: row;
+}
+
+.guess {
+  font-size: 3rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-gap: 1.5rem;
+  margin-top: 50px;
+}
+
+.guess > p{
+  border-bottom: 4px solid var(--primary-color);
+  padding: 0 1.5rem 0.2rem 1.5rem;
+  text-align: center;
+  margin: 0;
+}
+
+.guess > h3{
+  border-bottom: 0;
+  padding: 0rem;
+  font-size: 0.8rem;
+  text-align: center;
+  opacity: 0.8;
+  grid-column: span 4;
+  position: relative;
+  top: -50%;
+}
+
+.fade{
+  animation: fade 0.5s ease-in-out forwards infinite;
+}
+
+@keyframes fade {
+  0% {
+    color: black;
+  }
+  50% {
+    color: rgba(0, 0, 0, 0.5);
+  }
+  100% {
+    color: black;
+  }
+}
+
+.rightNumber{
+  color: green;
+}
+
+.rightPlace{
+  color: #eda70f;
+}
+
+.wrongNumber{
+  color: red;
+}
+

@@ -1,0 +1,20 @@
+Easy
+- no repeat
+- incorrect highlight
+
+Medium
+- repeat
+- incorrect highlight
+
+Hard
+- no repeat
+- hint
+
+Extreme
+- repeat
+- hint
+
+Custom
+- number digits
+- repeat/ no repeat
+- hint / highlight

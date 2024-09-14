@@ -1,0 +1,115 @@
+/* Centered title with the img in the middle of the two text blocks */
+.titleBar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: row;
+    margin-top: 2rem;
+    font-size: 5rem;
+}
+
+.logo {
+    width: 1em; /* Adjust size to fit within the text */
+    height: auto;
+    margin: 0 0.2em; /* Adjust spacing to fit within the text */
+    vertical-align: middle; /* Align the image with the text */
+}
+
+.titleBar h6{
+    font-size: 0.8rem;
+    margin-top: 20%;
+}
+
+.modeButton{
+    background: var(--primary-color);
+    padding: 5px;
+    border-radius: 5px;
+    color: white;
+    font-size: 1.5rem;
+    border: none;
+    cursor: pointer;
+    margin: 0 1rem;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.modeButton:hover{
+    background: var(--secondary-color);
+    color: var(--primary-color);
+}
+
+.selected{
+    background: #82a742;
+    color: white;
+
+}
+
+.selected:hover{
+    background: #708e3c;
+}
+
+
+/* Smooth scrolling for the game */
+* {
+    scroll-behavior: smooth;
+}
+
+
+.settingsPopup{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    text-align: center;
+}
+
+.settingsPopupContent{
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    width: 60%;
+    display: grid;
+    align-items: center;
+    justify-content: center;
+}
+
+.closeButton{
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+
+/* Slider */
+.sliderContainer{
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    align-items: center;
+    justify-items: center;
+    border-bottom: 5px solid var(--secondary-color);
+}
+
+.sliderOptions{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    width: 100%;
+    align-items: center;
+    justify-items: center;
+}
+
+
+.sliderOptions button{
+    font-size: 1.5em;
+    background: var(--primary-color);
+    border: none;
+    cursor: pointer;
+    color: var(--secondary-color);
+}

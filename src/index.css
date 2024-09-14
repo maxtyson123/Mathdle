@@ -1,0 +1,6 @@
+:root{
+    --primary-color: #b2b2b2;
+    --secondary-color: #e5e5e5;
+    --dark-color: #737373;
+    -webkit-tap-highlight-color:  rgba(255, 255, 255, 0);
+}
