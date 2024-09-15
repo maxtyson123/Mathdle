@@ -71,12 +71,12 @@ export const Mathdle = (config: Config) => {
           {!isMobile && <TopUI logo={configState.logo} difficulty={configState.difficulty}/>}
 
           {/* Buttons to change the mode */}
-          <div style={{display: "flex", justifyContent: "center"}}>
+          <div style={{display: "flex", justifyContent: "center"}} key={configState.mode}>
           {modeOptions.map((button, index) => (
                 <button
                     key={index}
                     onClick={button.onClick}
-                    className={uiStyles.modeButton + " " + (button.text == configState.mode ? uiStyles.active : "")}
+                    className={uiStyles.modeButton + " " + (button.text == configState.mode ? uiStyles.selected : "")}
                 >
                     {button.icon} {button.text}
                 </button>

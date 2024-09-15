@@ -62,3 +62,38 @@
   color: red;
 }
 
+.winMessage{
+  font-size: 2rem;
+  margin-top: 2rem;
+  background: green;
+  color: white;
+  padding: 1rem;
+  border-radius: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row;
+}
+
+.winMessage button{
+    background: white;
+    color: green;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    margin-left: 1rem;
+    cursor: pointer;
+}
+
+.winMessage button:hover{
+    opacity: 0.8;
+}
+
+.key{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, 1fr);
+    grid-gap: 1rem;
+    margin-top: 50px;
+    font-size: 0.8rem;
+    text-align: center;
+}

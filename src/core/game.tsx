@@ -4,10 +4,10 @@ import {useEffect, useRef} from "react";
 import {Theme} from "../index";
 
 // TODO : Finidh Game
-//      - Title
-//      - Daily Mode
-//      - Single Player Mode
-//      - Multiplayer Mode
+//          - Multiplayer Marking
+//          - Streaks
+//          - Stats
+//          - Custom (no enter press, length, allow multiple guesses)
 
 
 //NOTE: For debuging puroposes the arrays will be y, x instead of x, y (the cell id is cell-x-y)
@@ -34,6 +34,8 @@ export function Game(props: GameProps) {
     const [guesses, setGuesses] = React.useState<Guess[]>([]);
     const [answer, setAnswer] = React.useState<number[]>([-1,-1,-1,-1]);
     const [hasWon, setHasWon] = React.useState<boolean>(false);
+    const [messageText, setMessageText] = React.useState<string>("");
+    const [multiplayerSetNumber, setMultiplayerSetNumber] = React.useState<boolean>(false);
 
     // Set the theme variables
     useEffect(() => {
@@ -52,7 +54,13 @@ export function Game(props: GameProps) {
         return () => {
             window.removeEventListener('keydown', handleKeyPress);
         }
-    }, [props.difficulty, answer]);
+    }, [props.difficulty, answer, multiplayerSetNumber, guesses]);
+
+    // Scroll
+    useEffect(() => {
+        const scrollHere = document.getElementById("scrollHere");
+        if (scrollHere) scrollHere.scrollIntoView({behavior: "smooth"});
+    }, [guesses, currentGuess, hasWon]);
 
     // Rest the game when the difficulty changes
     useEffect(() => {
@@ -60,6 +68,9 @@ export function Game(props: GameProps) {
     }, [props.difficulty, props.mode]);
 
     const handleKeyPress = (e: KeyboardEvent) => {
+        // Clear message text
+        setMessageText("");
+
         // Check if the key is enter
         if (e.key === "Enter") {
 
@@ -69,6 +80,20 @@ export function Game(props: GameProps) {
                 // Check if the guess is not full
                 if (newGuess.indexOf(-1) !== -1) return newGuess;
 
+                // If multiplayer set the answer
+                if (props.mode === "Multiplayer" && !multiplayerSetNumber) {
+                    setAnswer(newGuess);
+                    setMultiplayerSetNumber(true);
+                    setMessageText("Player 2, make your guess");
+                    return [-1, -2, -2, -2];
+                }
+
+                // Check if the guess is already in the guesses
+                if (guesses.find(guess => guess.guess.join("") === newGuess.join(""))) {
+                    setMessageText("Guess already made");
+                    return newGuess;
+                }
+
                 let newMark = markGuess(newGuess);
 
                 const guess: Guess = {guess: newGuess, mark: newMark};
@@ -76,9 +101,10 @@ export function Game(props: GameProps) {
                 // Add the guess to the guesses array
                 setGuesses(prevState => [...prevState, guess]);
 
-                // Scroll the current guess into view
-                const item = document.getElementById("current");
-                if(item) item.scrollIntoView({behavior: "smooth", block: "end", inline: "nearest"});
+                // Check if won
+                if (newMark.every(value => value === 1)) {
+                    setHasWon(true);
+                }
 
                 // Reset the guess
                 return [-1, -2, -2, -2];
@@ -120,20 +146,29 @@ export function Game(props: GameProps) {
 
             let newGuess = [...prevState];
 
-            // If easy or hard no double digits so check if the guess already has the number
-            if (props.difficulty === "Easy" || props.difficulty === "Hard") {
-                if (newGuess.indexOf(parseInt(e.key)) !== -1) return newGuess;
-            }
-
             // Check if the guess is full
             let index = newGuess.indexOf(-1);
-            if (index === -1) return newGuess;
+            if (index === -1){
+                setMessageText("Press Enter to submit");
+                return newGuess;
+            }
+
+            // If easy or hard no double digits so check if the guess already has the number
+            if (props.difficulty === "Easy" || props.difficulty === "Hard") {
+                if (newGuess.indexOf(parseInt(e.key)) !== -1){
+                    setMessageText("Number already used");
+                    return newGuess;
+                }
+            }
 
             // Set the number
             newGuess[index] = parseInt(e.key);
 
             // Dont add cursor if it is the last number
-            if (index === 3) return newGuess;
+            if (index === 3){
+                setMessageText("Press Enter to submit");
+                return newGuess;
+            }
 
             // Add a cursor after the number
             newGuess[index + 1] = -1;
@@ -174,43 +209,12 @@ export function Game(props: GameProps) {
             }
         }
 
-        console.log(mark);
         return mark;
     };
 
     const generateAnswer = () => {
         let answer: number[] = [];
 
-
-        // If it is multiplayer
-        if (props.mode === "Multiplayer") {
-            while (true) {
-                let input = prompt("Enter a 4 digit number");
-                if (input !== null){
-                    if (input.length !== 4) {
-                        alert("Please enter a 4 digit number");
-                        continue;
-                    }
-                    if (isNaN(parseInt(input))) {
-                        alert("Please enter a number");
-                        continue;
-                    }
-
-                    if(props.difficulty === "Easy" || props.difficulty === "Hard"){
-                        if (new Set(input).size !== 4){
-                            alert("Please enter a number with no duplicates");
-                            continue;
-                        }
-                    }
-
-
-                    for (let i = 0; i < 4; i++) {
-                        answer.push(parseInt(input[i]));
-                    }
-                    return answer;
-                }
-            }
-        }
 
         const getSeededRandom = (seed: number) => {
             let x = Math.sin(seed++) * 10000;
@@ -266,14 +270,40 @@ export function Game(props: GameProps) {
         setAnswer(generateAnswer());
         setGuesses([]);
         setCurrentGuess([-1,-2,-2,-2]);
+        setMessageText("");
         setHasWon(false);
+
+
+        // Multiplayer
+        if (props.mode === "Multiplayer") {
+            setMultiplayerSetNumber(false);
+            setMessageText("Player 1, set the number");
+        }
     }
 
     return (
         <>
             <div className={styles.gameContainer}>
 
-                <button onClick={() => {setAnswer(generateAnswer)}}>{answer}</button>
+                {/* Key */}
+                {/*<div className={styles.key}>*/}
+                {/*    <div>*/}
+                {/*        <p className={styles.rightNumber}>{(props.difficulty === "Easy" || props.difficulty === "Medium") ? "Green" : "✔️"}</p>*/}
+                {/*        <p>Right Number, Right Place</p>*/}
+                {/*    </div>*/}
+                {/*    <div>*/}
+                {/*        <p className={styles.rightPlace}>{(props.difficulty === "Easy" || props.difficulty === "Medium") ? "Orange" : "🔘"}</p>*/}
+                {/*        <p>Right Number, Wrong Place</p>*/}
+                {/*    </div>*/}
+                {/*    {*/}
+                {/*        (props.difficulty === "Easy" || props.difficulty === "Medium") &&*/}
+                {/*        <div>*/}
+                {/*            <p className={styles.wrongNumber}>Red</p>*/}
+                {/*            <p>Wrong Number</p>*/}
+                {/*        </div>*/}
+                {/*    }*/}
+
+                {/*</div>*/}
 
                 {/* Previous Guesses */}
                 {guesses.map((guess, index) => {
@@ -302,33 +332,40 @@ export function Game(props: GameProps) {
                 })}
 
 
-                <div className={styles.guess} id={"current"}>
+                {!hasWon ?
 
-                    {/* Current Guess, -1 is |, -2 is empty */}
-                    {currentGuess.map((value, index) => {
-                        return (
-                            <>
-                                {value === -1 ?
+                    <div className={styles.guess} id={"current"}>
 
-                                    <p key={index} className={styles.fade}> | </p>
-                                    :
-                                    <p key={index}> {value === -2 ? " " : value}</p>
-                                }
-                            </>
-                        )
-                    })}
+                        {/* Current Guess, -1 is |, -2 is empty */}
+                        {currentGuess.map((value, index) => {
+                            return (
+                                <>
+                                    {value === -1 ?
 
-                    {/* If it is full tell the user to press enter */}
-                    {currentGuess.indexOf(-1) === -1 && <h3>Press Enter</h3>}
-                </div>
+                                        <p key={index} className={styles.fade}> | </p>
+                                        :
+                                        <p key={index}> {value === -2 ? " " : value}</p>
+                                    }
+                                </>
+                            )
+                        })}
 
+                        {/* If it is full tell the user to press enter */}
+                        {messageText && <h3>{messageText}</h3>}
+                    </div>
 
-                {/* Win Message */}
-                {hasWon && <div className={styles.winMessage}>
-                    <h1>You Won!</h1>
-                    <button onClick={reset}>Play Again</button>
-                </div>}
+                :
+                    <>
+                        {/* Win Message */}
+                        <div className={styles.winMessage}>
+                            <h1>You Won!</h1>
+                            <button onClick={reset}>Play Again</button>
+                        </div>
+                    </>
+                }
             </div>
+
+            <div id={"scrollHere"}/>
         </>
     );
 }
