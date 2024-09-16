@@ -161,6 +161,8 @@ export function Game(props: GameProps) {
                 }
             }
 
+
+
             // Set the number
             newGuess[index] = parseInt(e.key);
 
