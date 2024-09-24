@@ -97,3 +97,76 @@
     font-size: 0.8rem;
     text-align: center;
 }
+
+.markButtons button{
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 0 1rem;
+}
+
+.markButtons button:hover{
+    opacity: 0.8;
+}
+
+/* Add this to your CSS file */
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+.confetti {
+    position: fixed;
+    top: 0;
+    width: 10px;
+    height: 10px;
+    animation: confetti-fall linear infinite;
+}
+
+.streak {
+    display: grid;
+    grid-template-columns: 0.3fr 1.7fr;
+    background: #ffc04a;
+    width: 240px;
+    margin: 50px auto;
+    height: 60px;
+    border-radius: 30px;
+    color: white;
+    text-align: center;
+}
+
+.streak img {
+    width: 60px;
+    height: 60px;
+    aspect-ratio: 1/1;
+    display: block;
+    margin: 0;
+    background: #ff4a4a;
+    border-radius: 30px;
+}
+
+.streak p{
+    margin: auto;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.timer{
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    background: var(--primary-color);
+    border-radius: 0 10px 0 0;
+    margin: 0;
+    padding-left: 2px;
+    padding-right: 4px;
+}

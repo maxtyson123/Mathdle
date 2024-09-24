@@ -2,7 +2,7 @@ import * as React from 'react';
 import styles from '../styles/ui.module.css';
 import {useEffect, useRef} from "react";
 import {FullConfig} from "../index";
-import {GameDifficulty} from "./game";
+import {GameDifficulty, Stats} from "./game";
 
 
 interface TopUIProps {
@@ -80,6 +80,9 @@ type SettingsProps = {
     config: FullConfig;
     setConfig: (config: FullConfig) => void;
 
+    stats: Stats;
+    setStats: (stats: Stats) => void;
+
 }
 
 export function SettingsPopup(props: SettingsProps) {
@@ -100,6 +103,12 @@ export function SettingsPopup(props: SettingsProps) {
                     options={["Easy", "Medium", "Hard", "Extreme"]}
                     onChange={(value) => props.setConfig({...props.config, difficulty: (value as GameDifficulty)})}
                 />
+
+                {/* Stats */}
+                <h2>Stats</h2>
+                <p>Highest Streak: {props.stats.highestStreak}</p>
+
+
 
             </div>
         </div>

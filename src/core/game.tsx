@@ -4,18 +4,21 @@ import {useEffect, useRef} from "react";
 import {Theme} from "../index";
 
 // TODO : Finidh Game
-//          - Multiplayer Marking
-//          - Streaks
 //          - Stats
 //          - Custom (no enter press, length, allow multiple guesses)
+//          - API
+//          - Theme
+//          - Modularity
 
 
-//NOTE: For debuging puroposes the arrays will be y, x instead of x, y (the cell id is cell-x-y)
 
 type GameProps = {
     theme?: Theme;
     difficulty: GameDifficulty;
     mode: GameMode;
+
+    stats: Stats;
+    setStats: (stats: Stats) => void;
 }
 
 export type GameMode = "Daily" | "Single Player" | "Multiplayer";
@@ -27,15 +30,105 @@ type Guess = {
     mark: number[];
 }
 
+type Streak = {
+    count: number;
+    last: Date;
+}
+
+type DifficultyStats = {
+    easy: number;
+    medium: number;
+    hard: number;
+    extreme: number;
+}
+
+export type Stats = {
+
+    highestStreak: number;
+
+    // Total Wins
+    totalDa1ilyWins: number;
+    totalSinglePlayerWins: DifficultyStats;
+    totalMultiplayerWins: DifficultyStats;
+
+    // Total Guesses
+    totalDailyGuesses: number;
+    totalSinglePlayerGuesses: DifficultyStats;
+    totalMultiplayerGuesses: DifficultyStats;
+
+    // Shortest Game
+    shortestDailyGame: number;
+    shortestSinglePlayerGame: DifficultyStats;
+    shortestMultiplayerGame: DifficultyStats;
+
+    // Longest Game
+    longestDailyGame: number;
+    longestSinglePlayerGame: DifficultyStats;
+    longestMultiplayerGame: DifficultyStats;
+
+    // Time Played
+    timeDailyPlayed: number;
+    timeSinglePlayerPlayed: DifficultyStats;
+    timeMultiplayerPlayed: DifficultyStats;
+
+    // Longest Game (Time)
+    longestDailyGameTime: number;
+    longestSinglePlayerGameTime: DifficultyStats;
+    longestMultiplayerGameTime: DifficultyStats;
+
+    // Shortest Game (Time)
+    shortestDailyGameTime: number;
+    shortestSinglePlayerGameTime: DifficultyStats;
+    shortestMultiplayerGameTime: DifficultyStats;
+
+    // Can be calculated from this:
+    // - Average guesses
+    // - Average time
+    // - Win rate
+
+}
+
+export const baseStats: Stats = {
+    highestStreak: 0,
+    totalDa1ilyWins: 0,
+    totalSinglePlayerWins: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    totalMultiplayerWins: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    totalDailyGuesses: 0,
+    totalSinglePlayerGuesses: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    totalMultiplayerGuesses: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    shortestDailyGame: 0,
+    shortestSinglePlayerGame: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    shortestMultiplayerGame: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    longestDailyGame: 0,
+    longestSinglePlayerGame: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    longestMultiplayerGame: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    timeDailyPlayed: 0,
+    timeSinglePlayerPlayed: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    timeMultiplayerPlayed: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    longestDailyGameTime: 0,
+    longestSinglePlayerGameTime: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    longestMultiplayerGameTime: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    shortestDailyGameTime: 0,
+    shortestSinglePlayerGameTime: {easy: 0, medium: 0, hard: 0, extreme: 0},
+    shortestMultiplayerGameTime: {easy: 0, medium: 0, hard: 0, extreme: 0},
+
+}
 
 export function Game(props: GameProps) {
 
     const [currentGuess, setCurrentGuess] = React.useState<number[]>([-1,-2,-2,-2]);
     const [guesses, setGuesses] = React.useState<Guess[]>([]);
     const [answer, setAnswer] = React.useState<number[]>([-1,-1,-1,-1]);
+
     const [hasWon, setHasWon] = React.useState<boolean>(false);
     const [messageText, setMessageText] = React.useState<string>("");
+    const [timer, setTimer] = React.useState<number>(0);
+
     const [multiplayerSetNumber, setMultiplayerSetNumber] = React.useState<boolean>(false);
+    const [multiplayerMarking, setMultiplayerMarking] = React.useState<boolean>(false);
+    const [multiplayerMark, setMultiplayerMark] = React.useState<number[]>([-1,0,0,0]);
+
+    const [streak, setStreak] = React.useState<Streak>({count: 0, last: new Date()});
 
     // Set the theme variables
     useEffect(() => {
@@ -54,7 +147,7 @@ export function Game(props: GameProps) {
         return () => {
             window.removeEventListener('keydown', handleKeyPress);
         }
-    }, [props.difficulty, answer, multiplayerSetNumber, guesses]);
+    }, [props.difficulty, answer, multiplayerSetNumber, guesses, streak]);
 
     // Scroll
     useEffect(() => {
@@ -67,9 +160,92 @@ export function Game(props: GameProps) {
         reset();
     }, [props.difficulty, props.mode]);
 
+    // Handle winning
+    useEffect(() => {
+        if (hasWon) {
+            // Create confetti
+            createConfetti();
+
+            // Update the stats
+            updateStats();
+
+            // Add to the streak
+            if (props.mode === "Daily") {
+                const oldStreak = {...streak};
+                oldStreak.count++;
+                oldStreak.last = new Date();
+                localStorage.setItem("streak", JSON.stringify(oldStreak));
+                setStreak(oldStreak);
+            }
+        }else{
+            const confetti = document.querySelectorAll(`.${styles.confetti}`);
+            confetti.forEach(conf => conf.remove());
+        }
+    }, [hasWon]);
+
+    // Get the streak from local storage
+    useEffect(() => {
+
+        // If it is not daily, return
+        if (props.mode !== "Daily") return;
+
+        const streak = localStorage.getItem("streak");
+        if(!streak) return;
+
+        // Check if the streak is today
+        const streakObj = JSON.parse(streak);
+        const last = new Date(streakObj.last);
+        const now = new Date();
+
+        // If the streak was not yesterday, reset the streak
+        if(last.getDate() !== now.getDate() || last.getMonth() !== now.getMonth() || last.getFullYear() !== now.getFullYear()) {
+            if (last.getDate() !== now.getDate() - 1 || last.getMonth() !== now.getMonth() || last.getFullYear() !== now.getFullYear()) {
+                streakObj.count = 0;
+                streakObj.last = now;
+                console.log("resetting streak");
+                localStorage.setItem("streak", JSON.stringify(streakObj));
+            }
+        }
+
+        setStreak(streakObj);
+
+    }, []);
+
+    // Get the stats from local storage
+    useEffect(() => {
+
+        const stats = localStorage.getItem("stats");
+        if(!stats) return;
+
+        props.setStats(JSON.parse(stats));
+
+    }, []);
+
+    // Timer
+    useEffect(() => {
+
+        if(hasWon) return;
+
+        const interval = setInterval(() => {
+            setTimer(prevState => prevState + 1);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [timer, hasWon]);
+
     const handleKeyPress = (e: KeyboardEvent) => {
+
         // Clear message text
         setMessageText("");
+
+        if(props.mode === "Daily"){
+            const now = new Date();
+            const last = new Date(streak.last);
+            if ((last.getDate() === now.getDate() && last.getMonth() === now.getMonth() && last.getFullYear() === now.getFullYear()) && streak.count > 0) {
+                setMessageText("You have already played today, try again tomorrow");
+                return
+            }
+        }
 
         // Check if the key is enter
         if (e.key === "Enter") {
@@ -91,6 +267,14 @@ export function Game(props: GameProps) {
                 // Check if the guess is already in the guesses
                 if (guesses.find(guess => guess.guess.join("") === newGuess.join(""))) {
                     setMessageText("Guess already made");
+                    return newGuess;
+                }
+
+
+                // Check if multiplayer (means they have to mark the guess)
+                if (props.mode === "Multiplayer" && multiplayerSetNumber) {
+                    setMultiplayerMarking(true);
+                    setMessageText("Mark the guess: Digit 1");
                     return newGuess;
                 }
 
@@ -160,8 +344,6 @@ export function Game(props: GameProps) {
                     return newGuess;
                 }
             }
-
-
 
             // Set the number
             newGuess[index] = parseInt(e.key);
@@ -274,6 +456,7 @@ export function Game(props: GameProps) {
         setCurrentGuess([-1,-2,-2,-2]);
         setMessageText("");
         setHasWon(false);
+        setTimer(0);
 
 
         // Multiplayer
@@ -283,29 +466,157 @@ export function Game(props: GameProps) {
         }
     }
 
+
+    const markDigit = (status: number) => {
+
+        setMultiplayerMark(prevState => {
+            let newMark = [...prevState];
+            let index = newMark.indexOf(-1);
+
+
+            // Set the digit
+            newMark[index] = status;
+
+            if (index !== 3){
+                newMark[index + 1] = -1;
+            }else{
+                // Get the current guess
+                let newGuess = [...currentGuess];
+
+                const guess: Guess = {guess: newGuess, mark: newMark};
+
+                // Add the guess to the guesses array
+                setGuesses(prevState => [...prevState, guess]);
+
+                // Multiplayer Marking done
+                setMultiplayerMarking(false);
+
+                // Check if won
+                if (newMark.every(value => value === 1)) {
+                    setHasWon(true);
+                }
+
+                // Reset the guess
+                setCurrentGuess([-1, -2, -2, -2]);
+                setMessageText("");
+
+                return [-1, 0, 0, 0];
+            }
+
+            // Set the message text
+            setMessageText(`Mark the guess: Digit ${index + 2}`);
+
+            return newMark;
+        });
+    }
+
+    function createConfetti() {
+        const confettiColors = ['#ff0', '#f00', '#0f0', '#00f', '#f0f', '#0ff'];
+        const confettiCount = 100;
+
+        for (let i = 0; i < confettiCount; i++) {
+            const confetti = document.createElement('div');
+            confetti.classList.add(styles.confetti)
+            confetti.style.left = `${Math.random() * 100}vw`;
+            confetti.style.animationDuration = `${Math.random() * 3 + 2}s`;
+            confetti.style.animationDelay = `-${Math.random() * 2}s`;
+            confetti.style.backgroundColor = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+            document.body.appendChild(confetti);
+        }
+    }
+
+    const updateIfMore = (value: number, current: number) => {
+        if (value > current) return value;
+        return current;
+    }
+
+    const updateIfLess = (value: number, current: number) => {
+        if (value < current) return value;
+        return current;
+    }
+
+    const addBasedDifficulty = (value: number, current: DifficultyStats) => {
+        const newStats = {...current};
+        // @ts-ignore
+        newStats[props.difficulty.toLowerCase()] += value;
+        return newStats;
+    }
+
+    const updateIfMoreBasedDifficulty = (value: number, current: DifficultyStats) => {
+        const newStats = {...current};
+        // @ts-ignore
+        newStats[props.difficulty.toLowerCase()] = updateIfMore(value, current[props.difficulty.toLowerCase()]);
+        return newStats;
+    }
+
+    const updateIfLessBasedDifficulty = (value: number, current: DifficultyStats) => {
+        const newStats = {...current};
+        // @ts-ignore
+        newStats[props.difficulty.toLowerCase()] = updateIfLess(value, current[props.difficulty.toLowerCase()]);
+        return newStats;
+    }
+
+    const updateStats = () => {
+
+        const oldStats = {...props.stats};
+
+        switch (props.mode) {
+
+            case "Daily":
+                oldStats.highestStreak = updateIfMore(streak.count, oldStats.highestStreak);
+                oldStats.totalDa1ilyWins++;
+                oldStats.totalDailyGuesses += guesses.length;
+                oldStats.shortestDailyGame = updateIfLess(guesses.length, oldStats.shortestDailyGame);
+                oldStats.longestDailyGame = updateIfMore(guesses.length, oldStats.longestDailyGame);
+                oldStats.timeDailyPlayed += timer;
+                oldStats.longestDailyGameTime = updateIfMore(timer, oldStats.longestDailyGameTime);
+                oldStats.shortestDailyGameTime = updateIfLess(timer, oldStats.shortestDailyGameTime);
+                break
+
+            case "Single Player":
+                oldStats.totalSinglePlayerWins = addBasedDifficulty(1, oldStats.totalSinglePlayerWins);
+                oldStats.totalSinglePlayerGuesses = addBasedDifficulty(guesses.length, oldStats.totalSinglePlayerGuesses);
+                oldStats.shortestSinglePlayerGame = updateIfLessBasedDifficulty(guesses.length, oldStats.shortestSinglePlayerGame);
+                oldStats.longestSinglePlayerGame = updateIfMoreBasedDifficulty(guesses.length, oldStats.longestSinglePlayerGame);
+                oldStats.timeSinglePlayerPlayed = addBasedDifficulty(timer, oldStats.timeSinglePlayerPlayed);
+                oldStats.longestSinglePlayerGameTime = updateIfMoreBasedDifficulty(timer, oldStats.longestSinglePlayerGameTime);
+                oldStats.shortestSinglePlayerGameTime = updateIfLessBasedDifficulty(timer, oldStats.shortestSinglePlayerGameTime);
+                break
+
+            case "Multiplayer":
+                oldStats.totalMultiplayerWins = addBasedDifficulty(1, oldStats.totalMultiplayerWins);
+                oldStats.totalMultiplayerGuesses = addBasedDifficulty(guesses.length, oldStats.totalMultiplayerGuesses);
+                oldStats.shortestMultiplayerGame = updateIfLessBasedDifficulty(guesses.length, oldStats.shortestMultiplayerGame);
+                oldStats.longestMultiplayerGame = updateIfMoreBasedDifficulty(guesses.length, oldStats.longestMultiplayerGame);
+                oldStats.timeMultiplayerPlayed = addBasedDifficulty(timer, oldStats.timeMultiplayerPlayed);
+                oldStats.longestMultiplayerGameTime = updateIfMoreBasedDifficulty(timer, oldStats.longestMultiplayerGameTime);
+                oldStats.shortestMultiplayerGameTime = updateIfLessBasedDifficulty(timer, oldStats.shortestMultiplayerGameTime);
+                break
+        }
+
+        // Update the stats
+        localStorage.setItem("stats", JSON.stringify(oldStats));
+        props.setStats(oldStats);
+        console.log(oldStats);
+
+    }
+
+
     return (
         <>
             <div className={styles.gameContainer}>
 
-                {/* Key */}
-                {/*<div className={styles.key}>*/}
-                {/*    <div>*/}
-                {/*        <p className={styles.rightNumber}>{(props.difficulty === "Easy" || props.difficulty === "Medium") ? "Green" : "✔️"}</p>*/}
-                {/*        <p>Right Number, Right Place</p>*/}
-                {/*    </div>*/}
-                {/*    <div>*/}
-                {/*        <p className={styles.rightPlace}>{(props.difficulty === "Easy" || props.difficulty === "Medium") ? "Orange" : "🔘"}</p>*/}
-                {/*        <p>Right Number, Wrong Place</p>*/}
-                {/*    </div>*/}
-                {/*    {*/}
-                {/*        (props.difficulty === "Easy" || props.difficulty === "Medium") &&*/}
-                {/*        <div>*/}
-                {/*            <p className={styles.wrongNumber}>Red</p>*/}
-                {/*            <p>Wrong Number</p>*/}
-                {/*        </div>*/}
-                {/*    }*/}
+                {/* Timer */}
+                <div className={styles.timer}>
+                    <h3>{Math.floor(timer / 60)}:{timer % 60 < 10 ? "0" + timer % 60 : timer % 60}</h3>
+                </div>
 
-                {/*</div>*/}
+                {/* Streak */}
+                {props.mode === "Daily" && <div className={styles.streak}>
+                    <img src={"https://i0.wp.com/community.wacom.com/en-de/wp-content/uploads/sites/20/2023/10/Flame_GIF_2.gif"} alt={"Fire"} />
+                    <p>{streak.count} Day Streak</p>
+                </div>}
+
 
                 {/* Previous Guesses */}
                 {guesses.map((guess, index) => {
@@ -346,7 +657,7 @@ export function Game(props: GameProps) {
 
                                         <p key={index} className={styles.fade}> | </p>
                                         :
-                                        <p key={index}> {value === -2 ? " " : value}</p>
+                                        <p key={index} className={((multiplayerMark.indexOf(-1) == index && multiplayerMarking) ? styles.fade : "")}> {value === -2 ? " " : value}</p>
                                     }
                                 </>
                             )
@@ -366,6 +677,14 @@ export function Game(props: GameProps) {
                     </>
                 }
             </div>
+
+            {/* Buttons to mark on multiplayer */}
+            {multiplayerMarking && <div className={styles.markButtons}>
+                <button onClick={() => markDigit(1)}>{(props.difficulty === "Easy" || props.difficulty === "Medium") ? "Right number, Right Place" : "✔️"}</button>
+                <button onClick={() => markDigit(2)}>{(props.difficulty === "Easy" || props.difficulty === "Medium") ? "Right number, Wrong Place" : "🔘"}</button>
+                <button onClick={() => markDigit(3)}>{(props.difficulty === "Easy" || props.difficulty === "Medium") ? "Wrong number" : "❌"}</button>
+            </div>}
+
 
             <div id={"scrollHere"}/>
         </>
